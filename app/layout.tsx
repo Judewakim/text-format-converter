@@ -4,6 +4,11 @@ import { AuthProvider } from '@/components/AuthProvider'
 export const metadata = {
   title: 'AI Text Tools Dashboard',
   description: 'Professional AI-powered text manipulation tools',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export default function RootLayout({

@@ -41,8 +41,9 @@ export default function Navigation({ showBackButton = false, title }: Navigation
                 <ArrowLeftIcon className="w-5 h-5" />
               </button>
             )}
-            <Link href="/dashboard" className="text-xl font-light text-gray-900">
-              {title || 'AI Tools Dashboard'}
+            <Link href="/dashboard" className="flex items-center space-x-2 text-xl font-light text-gray-900">
+              <img src="/logo.png" alt="Logo" className="w-8 h-8" />
+              <span>{title || 'AI Tools Dashboard'}</span>
             </Link>
           </div>
           
