@@ -1,7 +1,3 @@
-// Debug: Check if env vars are loaded
-console.log('User Pool ID:', process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID)
-console.log('Client ID:', process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID)
-
 const awsconfig = {
   aws_project_region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1',
   aws_cognito_region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1',
@@ -19,7 +15,5 @@ const awsconfig = {
   },
   aws_cognito_verification_mechanisms: ['email']
 };
-
-console.log('AWS Config:', awsconfig)
 
 export default awsconfig;

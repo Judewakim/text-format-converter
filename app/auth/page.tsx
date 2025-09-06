@@ -41,9 +41,9 @@ export default function AuthPage() {
               // Redirect to dashboard when authenticated
               if (user) {
                 router.push('/dashboard')
-                return null
+                return <div>Redirecting...</div>
               }
-              return null
+              return <div></div>
             }}
           </Authenticator>
         </div>
