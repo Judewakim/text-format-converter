@@ -4,6 +4,11 @@ import { TranslateTextCommand } from '@aws-sdk/client-translate'
 
 export async function POST(request: NextRequest) {
   try {
+    // Debug: Check if AWS credentials are available
+    console.log('AWS Region:', process.env.AWS_REGION || process.env.NEXT_PUBLIC_AWS_REGION)
+    console.log('AWS Access Key exists:', !!process.env.AWS_ACCESS_KEY_ID)
+    console.log('AWS Secret Key exists:', !!process.env.AWS_SECRET_ACCESS_KEY)
+    
     const { text, sourceLanguage, targetLanguage } = await request.json()
 
     if (!text || !sourceLanguage || !targetLanguage) {
@@ -23,8 +28,19 @@ export async function POST(request: NextRequest) {
       sourceLanguage,
       targetLanguage
     })
-  } catch (error) {
-    console.error('Translation API error:', error)
-    return NextResponse.json({ error: 'Translation failed' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Translation API error:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      statusCode: error.$metadata?.httpStatusCode,
+      requestId: error.$metadata?.requestId,
+      stack: error.stack
+    })
+    return NextResponse.json({ 
+      error: 'Translation failed', 
+      details: error.message,
+      code: error.code 
+    }, { status: 500 })
   }
 }
