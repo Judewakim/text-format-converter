@@ -29,10 +29,14 @@ export async function POST(request: NextRequest) {
       }))
     ])
 
+    const sentimentType = sentimentResult.Sentiment || 'NEUTRAL'
+    const confidenceScore = sentimentResult.SentimentScore ? 
+      (sentimentResult.SentimentScore as any)[sentimentType] || 0 : 0
+
     return NextResponse.json({
       sentiment: {
-        sentiment: sentimentResult.Sentiment,
-        confidence: sentimentResult.SentimentScore?.[sentimentResult.Sentiment || 'NEUTRAL'] || 0
+        sentiment: sentimentType,
+        confidence: confidenceScore
       },
       entities: entitiesResult.Entities?.map(entity => ({
         text: entity.Text,
