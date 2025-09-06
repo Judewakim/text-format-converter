@@ -5,9 +5,9 @@ export async function POST(request: NextRequest) {
   try {
     const { text, sourceLanguage, targetLanguage } = await request.json()
     
-    // Validate credentials
+    // Validate and decode credentials
     const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.replace(/[\r\n\s]/g, '')
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.replace(/[\r\n\s]/g, '')
+    const secretAccessKey = Buffer.from(process.env.AWS_SECRET_ACCESS_KEY || '', 'base64').toString('utf-8')
     
     if (!accessKeyId || !secretAccessKey) {
       return NextResponse.json({ error: 'AWS credentials not configured' }, { status: 500 })
