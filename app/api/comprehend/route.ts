@@ -30,8 +30,14 @@ export async function POST(request: NextRequest) {
     ])
 
     const sentimentType = sentimentResult.Sentiment || 'NEUTRAL'
+    const sentimentMapping: { [key: string]: string } = {
+      'POSITIVE': 'Positive',
+      'NEGATIVE': 'Negative', 
+      'NEUTRAL': 'Neutral',
+      'MIXED': 'Mixed'
+    }
     const confidenceScore = sentimentResult.SentimentScore ? 
-      (sentimentResult.SentimentScore as any)[sentimentType] || 0 : 0
+      (sentimentResult.SentimentScore as any)[sentimentMapping[sentimentType]] || 0 : 0
 
     return NextResponse.json({
       sentiment: {
