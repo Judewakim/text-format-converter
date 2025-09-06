@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { comprehendClient } from '@/lib/aws-services'
 import { 
+  Comprehend,
   DetectSentimentCommand,
   DetectEntitiesCommand,
   DetectKeyPhrasesCommand
@@ -13,6 +13,23 @@ export async function POST(request: NextRequest) {
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
+    
+    // Validate and clean credentials
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.replace(/[\r\n\s]/g, '')
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.replace(/[\r\n\s]/g, '')
+    
+    if (!accessKeyId || !secretAccessKey) {
+      return NextResponse.json({ error: 'AWS credentials not configured' }, { status: 500 })
+    }
+    
+    // Create client with clean credentials
+    const comprehendClient = new Comprehend({
+      region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId,
+        secretAccessKey
+      }
+    })
 
     const [sentimentResult, entitiesResult, keyPhrasesResult] = await Promise.all([
       comprehendClient.send(new DetectSentimentCommand({

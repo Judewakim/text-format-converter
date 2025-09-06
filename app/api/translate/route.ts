@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { translateClient } from '@/lib/aws-services'
-import { TranslateTextCommand } from '@aws-sdk/client-translate'
+import { Translate, TranslateTextCommand } from '@aws-sdk/client-translate'
 
 export async function POST(request: NextRequest) {
   try {
-    // Debug: Check if AWS credentials are available
-    console.log('AWS Region:', process.env.AWS_REGION || process.env.NEXT_PUBLIC_AWS_REGION)
-    console.log('AWS Access Key exists:', !!process.env.AWS_ACCESS_KEY_ID)
-    console.log('AWS Secret Key exists:', !!process.env.AWS_SECRET_ACCESS_KEY)
-    
     const { text, sourceLanguage, targetLanguage } = await request.json()
+    
+    // Validate credentials
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.replace(/[\r\n\s]/g, '')
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.replace(/[\r\n\s]/g, '')
+    
+    if (!accessKeyId || !secretAccessKey) {
+      return NextResponse.json({ error: 'AWS credentials not configured' }, { status: 500 })
+    }
+    
+    // Create client with clean credentials
+    const translateClient = new Translate({
+      region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId,
+        secretAccessKey
+      }
+    })
 
     if (!text || !sourceLanguage || !targetLanguage) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
