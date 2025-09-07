@@ -117,7 +117,7 @@ export default function TranslatePage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Translation
                   </label>
-                  <div className="w-full h-48 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                  <div className="w-full h-48 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto">
                     {isLoading ? (
                       <div className="flex items-center justify-center h-full">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
