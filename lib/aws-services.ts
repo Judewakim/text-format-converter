@@ -40,5 +40,6 @@ export const supportedLanguages = [
   { code: 'pt', name: 'Portuguese' },
   { code: 'ja', name: 'Japanese' },
   { code: 'ko', name: 'Korean' },
-  { code: 'zh', name: 'Chinese' }
+  { code: 'zh', name: 'Chinese' },
+  { code: 'ar', name: 'Arabic' }
 ]
