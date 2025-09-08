@@ -19,16 +19,12 @@ export const rekognitionClient = new Rekognition(awsConfig)
 export const textractClient = new Textract(awsConfig)
 
 export const pollyVoices = [
-  { id: 'Joanna', name: 'Joanna (US English)', language: 'en-US' },
-  { id: 'Matthew', name: 'Matthew (US English)', language: 'en-US' },
-  { id: 'Amy', name: 'Amy (British English)', language: 'en-GB' },
-  { id: 'Brian', name: 'Brian (British English)', language: 'en-GB' },
-  { id: 'Celine', name: 'Celine (French)', language: 'fr-FR' },
-  { id: 'Marlene', name: 'Marlene (German)', language: 'de-DE' },
-  { id: 'Conchita', name: 'Conchita (Spanish)', language: 'es-ES' },
-  { id: 'Enrique', name: 'Enrique (Spanish)', language: 'es-ES' },
-  { id: 'Mia', name: 'Mia (Mexican Spanish)', language: 'es-MX' },
-  { id: 'Zeina', name: 'Zeina (Arabic)', language: 'arb' }
+  { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam (English)', language: 'en-US' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (English)', language: 'en-US' },
+  { id: 'VR6AewLTigWG4xSOukaG', name: 'Antoni (English)', language: 'en-US' },
+  { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh (English)', language: 'en-US' },
+  { id: 'rNtJLvN1Sv7RakOqaGAH', name: 'Arnold (English)', language: 'en-US' },
+  { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi (English)', language: 'en-US' }
 ]
 
 export const supportedLanguages = [
