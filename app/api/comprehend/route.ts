@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { comprehendClient } from '@/lib/aws-services'
-import { 
-  DetectSentimentCommand,
-  DetectEntitiesCommand,
-  DetectKeyPhrasesCommand
-} from '@aws-sdk/client-comprehend'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,48 +8,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
 
-    const [sentimentResult, entitiesResult, keyPhrasesResult] = await Promise.all([
-      comprehendClient.send(new DetectSentimentCommand({
-        Text: text,
-        LanguageCode: 'en'
-      })),
-      comprehendClient.send(new DetectEntitiesCommand({
-        Text: text,
-        LanguageCode: 'en'
-      })),
-      comprehendClient.send(new DetectKeyPhrasesCommand({
-        Text: text,
-        LanguageCode: 'en'
-      }))
-    ])
-
-    const sentimentType = sentimentResult.Sentiment || 'NEUTRAL'
-    const sentimentMapping: { [key: string]: string } = {
-      'POSITIVE': 'Positive',
-      'NEGATIVE': 'Negative', 
-      'NEUTRAL': 'Neutral',
-      'MIXED': 'Mixed'
-    }
-    const confidenceScore = sentimentResult.SentimentScore ? 
-      (sentimentResult.SentimentScore as any)[sentimentMapping[sentimentType]] || 0 : 0
-
-    return NextResponse.json({
-      sentiment: {
-        sentiment: sentimentType,
-        confidence: confidenceScore
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
       },
-      entities: entitiesResult.Entities?.map(entity => ({
-        text: entity.Text,
-        type: entity.Type,
-        confidence: entity.Score || 0
-      })) || [],
-      keyPhrases: keyPhrasesResult.KeyPhrases?.map(phrase => ({
-        text: phrase.Text,
-        confidence: phrase.Score || 0
-      })) || []
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [{
+          role: 'user',
+          content: `Analyze this text and return a JSON response with sentiment analysis, entities, and key phrases:
+
+Text: "${text}"
+
+Return format:
+{
+  "sentiment": {
+    "sentiment": "POSITIVE|NEGATIVE|NEUTRAL|MIXED",
+    "confidence": 0.95
+  },
+  "entities": [
+    {"text": "entity", "type": "PERSON|ORGANIZATION|LOCATION|OTHER", "confidence": 0.9}
+  ],
+  "keyPhrases": [
+    {"text": "key phrase", "confidence": 0.8}
+  ]
+}`
+        }],
+        temperature: 0.1
+      })
     })
-  } catch (error) {
-    console.error('Comprehend API error:', error)
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const analysisText = data.choices[0].message.content
+    
+    // Parse the JSON response from GPT-4
+    const analysis = JSON.parse(analysisText)
+    
+    return NextResponse.json(analysis)
+  } catch (error: any) {
+    console.error('OpenAI API error:', error.message)
     return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
   }
 }

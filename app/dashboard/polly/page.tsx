@@ -8,10 +8,15 @@ import Navigation from '@/components/Navigation'
 
 export default function PollyPage() {
   const [text, setText] = useState('')
-  const [selectedVoice, setSelectedVoice] = useState('Joanna')
+  const [selectedVoice, setSelectedVoice] = useState('pNInz6obpgDQGcFmaJgB')
   const [isLoading, setIsLoading] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [stability, setStability] = useState(0.5)
+  const [similarityBoost, setSimilarityBoost] = useState(0.5)
+  const [style, setStyle] = useState(0.0)
+  const [speakerBoost, setSpeakerBoost] = useState(true)
 
   const synthesizeSpeech = async () => {
     if (!text.trim()) return
@@ -21,7 +26,14 @@ export default function PollyPage() {
       const response = await fetch('/api/polly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voiceId: selectedVoice })
+        body: JSON.stringify({ 
+          text, 
+          voiceId: selectedVoice,
+          stability,
+          similarityBoost,
+          style,
+          speakerBoost
+        })
       })
       
       if (response.ok) {
@@ -103,6 +115,80 @@ export default function PollyPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <button
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <span>Advanced Settings</span>
+                  <span className={`transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+                
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg"
+                  >
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Stability: {stability}
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={stability}
+                          onChange={(e) => setStability(parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Similarity: {similarityBoost}
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={similarityBoost}
+                          onChange={(e) => setSimilarityBoost(parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Style: {style}
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={style}
+                          onChange={(e) => setStyle(parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="flex items-center space-x-2 text-xs font-medium text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={speakerBoost}
+                            onChange={(e) => setSpeakerBoost(e.target.checked)}
+                            className="rounded"
+                          />
+                          <span>Speaker Boost</span>
+                        </label>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               <div>
