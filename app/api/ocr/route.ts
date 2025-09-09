@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
+    // Debug: Check if API key exists
+    console.log('Google Cloud API Key exists:', !!process.env.GOOGLE_CLOUD_API_KEY)
+    console.log('API Key length:', process.env.GOOGLE_CLOUD_API_KEY?.length)
+    
     const formData = await request.formData()
     const imageFile = formData.get('image') as File
 
     if (!imageFile) {
       return NextResponse.json({ error: 'Image file is required' }, { status: 400 })
+    }
+    
+    if (!process.env.GOOGLE_CLOUD_API_KEY) {
+      return NextResponse.json({ error: 'Google Cloud API key not configured' }, { status: 500 })
     }
 
     // Convert file to base64

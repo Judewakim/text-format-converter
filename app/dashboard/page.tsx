@@ -49,20 +49,20 @@ const tools = [
     href: '/dashboard/comprehend'
   },
   {
-    id: 'rekognition',
+    id: 'ocr',
     name: 'Image Text',
     description: 'Extract text from images',
     icon: EyeIcon,
-    color: 'from-red-500 to-red-600',
-    href: '/dashboard/rekognition'
+    color: 'from-yellow-500 to-yellow-600',
+    href: '/dashboard/ocr'
   },
   {
-    id: 'textract',
-    name: 'Document Analysis',
-    description: 'Extract data from documents',
+    id: 'document-analysis',
+    name: 'Smart Document Reader',
+    description: 'AI-powered document understanding',
     icon: CpuChipIcon,
-    color: 'from-indigo-500 to-indigo-600',
-    href: '/dashboard/textract'
+    color: 'from-red-500 to-red-600',
+    href: '/dashboard/document-analysis'
   }
 ]
 

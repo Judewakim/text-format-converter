@@ -36,7 +36,7 @@ export default function LandingPage() {
             </Link>
             
             <div className="text-sm text-gray-500 mt-4">
-              Powered by AWS AI Services
+              Powered by the best AI services on the market
             </div>
           </motion.div>
         </motion.div>
@@ -45,12 +45,15 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.6 }}
-          className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+          className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto"
         >
           {[
-            { title: 'Text to Speech', desc: 'Natural voice synthesis with Amazon Polly' },
-            { title: 'Translation', desc: 'Real-time multilingual translation' },
-            { title: 'Text Analysis', desc: 'Intelligent content comprehension' }
+            { title: 'Text to Speech', desc: 'Premium voice synthesis with ElevenLabs' },
+            { title: 'Translation', desc: 'High-accuracy translation with DeepL' },
+            { title: 'Text Analysis', desc: 'Advanced AI analysis with GPT-4' },
+            { title: 'Speech to Text', desc: 'Audio transcription with OpenAI Whisper' },
+            { title: 'OCR', desc: 'Image text extraction with Google Vision' },
+            { title: 'Document Analysis', desc: 'Smart document processing with AI' }
           ].map((feature, i) => (
             <motion.div
               key={i}
