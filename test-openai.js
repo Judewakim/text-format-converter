@@ -6,7 +6,7 @@ async function testOpenAI() {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer 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`,
+        'Authorization': `Bearer [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]`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

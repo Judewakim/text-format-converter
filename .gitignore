@@ -5,6 +5,9 @@
 
 # Testing
 /coverage
+test-*.js
+test-openai.js
+test-setup.js
 
 # Next.js
 /.next/
