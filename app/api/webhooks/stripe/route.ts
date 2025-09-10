@@ -10,7 +10,7 @@ import { validateWebhookSource, checkWebhookRateLimit } from '@/lib/webhook-vali
 import { handlePaymentFailure } from '@/lib/payment-failure-handler'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20'
+  apiVersion: '2025-08-27.basil'
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -111,8 +111,8 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
           stripe_subscription_id: subscription.id,
           plan_type: planType,
           status: status,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          current_period_start: (subscription as any).current_period_start ? new Date((subscription as any).current_period_start * 1000).toISOString() : null,
+          current_period_end: (subscription as any).current_period_end ? new Date((subscription as any).current_period_end * 1000).toISOString() : null,
           updated_at: new Date().toISOString()
         })
 
