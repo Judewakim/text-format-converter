@@ -80,6 +80,9 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     planType = 'professional'
   }
 
+  // Cast subscription to access period properties
+  const sub = subscription as any
+
   // Update or create subscription record
   await supabaseAdmin
     .from('user_subscriptions')
@@ -89,8 +92,8 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       stripe_subscription_id: subscriptionId,
       plan_type: planType,
       status: subscription.status === 'active' ? 'active' : subscription.status,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
+      current_period_start: sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null,
+      current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null
     }, {
       onConflict: 'user_id'
     })
