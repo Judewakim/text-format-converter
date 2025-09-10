@@ -1,3 +1,5 @@
+// Text analysis tool page - analyzes sentiment, entities, and key phrases using AI
+// Provides comprehensive text understanding with visual result presentation
 'use client'
 
 import { useState } from 'react'

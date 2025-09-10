@@ -1,3 +1,5 @@
+// Root layout component - defines the base HTML structure and global providers
+// Wraps all pages with authentication context and applies global styles
 import './globals.css'
 import { AuthProvider } from '@/components/AuthProvider'
 

@@ -1,3 +1,5 @@
+// Translation API route - translates text between languages using DeepL API
+// Supports multiple language pairs with high-quality translation results
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

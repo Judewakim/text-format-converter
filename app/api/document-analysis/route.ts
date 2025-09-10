@@ -1,3 +1,5 @@
+// Document analysis API route - analyzes document images using OpenAI GPT-4 Vision
+// Extracts structured data, entities, and insights from document images
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -7,6 +9,16 @@ export async function POST(request: NextRequest) {
 
     if (!documentFile) {
       return NextResponse.json({ error: 'Document file is required' }, { status: 400 })
+    }
+    
+    // Check if file is an image
+    if (!documentFile.type.startsWith('image/')) {
+      return NextResponse.json({ error: 'Only image files are supported (PNG, JPG, JPEG, GIF, WebP)' }, { status: 400 })
+    }
+    
+    // Check file size (OpenAI has a 20MB limit)
+    if (documentFile.size > 20 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File size must be less than 20MB' }, { status: 400 })
     }
 
     // Convert file to base64
@@ -21,7 +33,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
+        model: 'gpt-4o',
         messages: [{
           role: 'user',
           content: [
@@ -43,22 +55,29 @@ export async function POST(request: NextRequest) {
     })
 
     if (!response.ok) {
-      throw new Error(`OpenAI Vision API error: ${response.status}`)
+      const errorData = await response.json()
+      console.error('OpenAI API Error Details:', errorData)
+      throw new Error(`OpenAI Vision API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`)
     }
 
     const data = await response.json()
-    const analysisText = data.choices[0].message.content
+    let analysisText = data.choices[0].message.content
+    
+    // Remove markdown code blocks if present
+    analysisText = analysisText.replace(/```json\s*|```\s*/g, '').trim()
     
     // Try to parse JSON, fallback to plain text if parsing fails
     let analysis
     try {
       analysis = JSON.parse(analysisText)
-    } catch {
+    } catch (parseError) {
+      console.error('JSON parsing failed:', parseError)
+      console.error('Raw response:', analysisText)
       analysis = {
         title: 'Document Analysis',
         summary: analysisText,
         key_points: [],
-        entities: [],
+        entities: { people: [], organizations: [], dates: [] },
         document_type: 'Unknown'
       }
     }

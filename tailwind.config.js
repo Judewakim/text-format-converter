@@ -1,3 +1,5 @@
+// Tailwind CSS configuration - defines styling system with Apple-inspired design tokens
+// Configures custom colors, fonts, animations, and component styles
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [

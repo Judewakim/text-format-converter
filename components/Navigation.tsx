@@ -1,3 +1,5 @@
+// Navigation component - provides top navigation bar with user menu and back button
+// Handles user authentication state and navigation between dashboard pages
 'use client'
 
 import { useAuth } from './AuthProvider'

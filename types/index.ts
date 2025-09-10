@@ -1,3 +1,5 @@
+// TypeScript type definitions - defines interfaces for application data structures
+// Provides type safety for AI tools, API responses, and component props
 export interface AITool {
   id: string
   name: string

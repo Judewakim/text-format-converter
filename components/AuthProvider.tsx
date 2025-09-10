@@ -1,3 +1,5 @@
+// Authentication provider component - manages user authentication state across the app
+// Integrates with AWS Amplify/Cognito and provides auth context to child components
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'

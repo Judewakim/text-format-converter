@@ -1,3 +1,5 @@
+# AWS Amplify build configuration - defines deployment pipeline for the application
+# Configures build phases, environment setup, and artifact handling
 version: 1
 backend:
   phases:

@@ -1,3 +1,6 @@
+# Git ignore file - specifies which files and directories Git should ignore
+# Prevents committing sensitive data, build artifacts, and temporary files
+
 # Dependencies
 /node_modules
 /.pnp
@@ -5,6 +8,9 @@
 
 # Testing
 /coverage
+test-*.js
+test-openai.js
+test-setup.js
 
 # Next.js
 /.next/

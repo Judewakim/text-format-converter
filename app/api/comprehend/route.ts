@@ -1,3 +1,5 @@
+// Text analysis API route - analyzes sentiment, entities, and key phrases using OpenAI GPT-4
+// Provides comprehensive text understanding with structured JSON responses
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [{
           role: 'user',
           content: `Analyze this text and return a JSON response with sentiment analysis, entities, and key phrases:

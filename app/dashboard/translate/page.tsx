@@ -1,3 +1,5 @@
+// Translation tool page - translates text between multiple languages using DeepL
+// Features language selection, text input/output, and language swap functionality
 'use client'
 
 import { useState } from 'react'

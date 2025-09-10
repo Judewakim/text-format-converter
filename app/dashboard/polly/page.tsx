@@ -1,3 +1,5 @@
+// Text-to-Speech tool page - converts text to natural speech using ElevenLabs
+// Provides voice selection, advanced audio settings, and audio playback/download
 'use client'
 
 import { useState } from 'react'
