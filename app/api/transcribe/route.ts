@@ -1,14 +1,26 @@
 // Speech-to-Text API route - transcribes audio files using OpenAI Whisper
 // Converts uploaded audio files to accurate text transcriptions
 import { NextRequest, NextResponse } from 'next/server'
+import { secureApiHandler } from '@/lib/secure-api-wrapper'
+import { validateFile } from '@/lib/input-validator'
 
 export async function POST(request: NextRequest) {
-  try {
+  return secureApiHandler(request, 'transcribe', async (user, request) => {
     const formData = await request.formData()
     const audioFile = formData.get('audio') as File
 
     if (!audioFile) {
       return NextResponse.json({ error: 'Audio file is required' }, { status: 400 })
+    }
+    
+    // Validate audio file
+    const fileValidation = validateFile(
+      audioFile, 
+      ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/webm'], 
+      25 * 1024 * 1024 // 25MB limit
+    )
+    if (!fileValidation.isValid) {
+      return NextResponse.json({ error: fileValidation.errors[0] }, { status: 400 })
     }
 
     const whisperFormData = new FormData()
@@ -32,11 +44,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       transcription: data.text
     })
-  } catch (error: any) {
-    console.error('Whisper API error:', error.message)
-    return NextResponse.json({ 
-      error: 'Transcription failed', 
-      details: error.message 
-    }, { status: 500 })
-  }
+  })
 }

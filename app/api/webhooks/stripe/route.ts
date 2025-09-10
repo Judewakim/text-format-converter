@@ -1,33 +1,60 @@
-// Stripe webhook handler - processes subscription and payment events
-// Manages user subscription status, billing cycles, and payment notifications
+// Stripe webhook handler - processes subscription lifecycle events
+// Handles payment success/failure, subscription changes, and cancellations
 import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase'
+import { setFallbackPlan } from '@/lib/subscription-manager'
+import { logSecurityEvent } from '@/lib/security-logger'
+import { validateWebhookSource, checkWebhookRateLimit } from '@/lib/webhook-validator'
+import { handlePaymentFailure } from '@/lib/payment-failure-handler'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil'
+  apiVersion: '2024-06-20'
 })
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
+if (!webhookSecret || webhookSecret === 'we_will_add_this_later') {
+  console.error('STRIPE_WEBHOOK_SECRET not configured')
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Security validations
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+    
+    if (!checkWebhookRateLimit(ip)) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+    }
+
+    if (!await validateWebhookSource(request)) {
+      return NextResponse.json({ error: 'Invalid source' }, { status: 403 })
+    }
+
     const body = await request.text()
-    const signature = request.headers.get('stripe-signature')!
+    const headersList = headers()
+    const signature = headersList.get('stripe-signature')
 
+    if (!signature) {
+      return NextResponse.json({ error: 'No signature' }, { status: 400 })
+    }
+
+    // Verify webhook signature
     let event: Stripe.Event
-
     try {
-      event = stripe.webhooks.constructEvent(
-        body,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET || 'temp_secret_for_build'
-      )
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
     } catch (err) {
-      console.error('Webhook signature verification failed:', err)
+      await logSecurityEvent({
+        timestamp: new Date().toISOString(),
+        event_type: 'auth_failure',
+        details: { error: 'Invalid webhook signature' },
+        severity: 'high'
+      })
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
-    console.log('Received webhook event:', event.type)
-
+    // Process webhook event
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
@@ -35,15 +62,15 @@ export async function POST(request: NextRequest) {
         break
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+        await handleSubscriptionCancellation(event.data.object as Stripe.Subscription)
         break
 
       case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice)
+        await handlePaymentSuccess(event.data.object as Stripe.Invoice)
         break
 
       case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice)
+        await handlePaymentFailedWebhook(event.data.object as Stripe.Invoice)
         break
 
       default:
@@ -53,89 +80,187 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error('Webhook error:', error)
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Webhook failed' }, { status: 500 })
   }
 }
 
+// Handle subscription creation/updates
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer as string
-  const subscriptionId = subscription.id
+  const maxRetries = 3
+  let attempt = 0
   
-  // Get customer to find user_id (we'll store this in metadata)
-  const customer = await stripe.customers.retrieve(customerId)
-  const userId = (customer as Stripe.Customer).metadata?.user_id
+  while (attempt < maxRetries) {
+    try {
+      const customerId = subscription.customer as string
+      const userId = await getUserIdFromCustomer(customerId)
+      
+      if (!userId) {
+        console.error('No user found for customer:', customerId)
+        return
+      }
 
-  if (!userId) {
-    console.error('No user_id found in customer metadata')
-    return
+      const planType = getPlanTypeFromSubscription(subscription)
+      const status = subscription.status === 'active' ? 'active' : 'inactive'
+
+      // Update database with retry logic
+      await supabaseAdmin
+        .from('user_subscriptions')
+        .upsert({
+          user_id: userId,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+          plan_type: planType,
+          status: status,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          updated_at: new Date().toISOString()
+        })
+
+      // Update fallback cache
+      setFallbackPlan(userId, planType)
+
+      await logSecurityEvent({
+        timestamp: new Date().toISOString(),
+        event_type: 'api_access',
+        user_id: userId,
+        details: { 
+          action: 'subscription_updated',
+          plan: planType,
+          status: status
+        },
+        severity: 'low'
+      })
+      
+      return // Success, exit retry loop
+    } catch (error) {
+      attempt++
+      console.error(`Error handling subscription change (attempt ${attempt}):`, error)
+      
+      if (attempt >= maxRetries) {
+        console.error('Max retries reached for subscription change')
+        return
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+    }
   }
+}
 
-  // Determine plan type from price ID
-  const priceId = subscription.items.data[0]?.price.id
-  let planType = 'free'
-  
-  if (priceId === process.env.STRIPE_ESSENTIAL_PRICE_ID) {
-    planType = 'essential'
-  } else if (priceId === process.env.STRIPE_PROFESSIONAL_PRICE_ID) {
-    planType = 'professional'
-  }
+// Handle subscription cancellation
+async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
+  try {
+    const customerId = subscription.customer as string
+    const userId = await getUserIdFromCustomer(customerId)
+    
+    if (!userId) return
 
-  // Cast subscription to access period properties
-  const sub = subscription as any
+    // Update to free plan
+    await supabaseAdmin
+      .from('user_subscriptions')
+      .update({
+        plan_type: 'free',
+        status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('stripe_customer_id', customerId)
 
-  // Update or create subscription record
-  await supabaseAdmin
-    .from('user_subscriptions')
-    .upsert({
+    // Update fallback cache
+    setFallbackPlan(userId, 'free')
+
+    await logSecurityEvent({
+      timestamp: new Date().toISOString(),
+      event_type: 'api_access',
       user_id: userId,
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      plan_type: planType,
-      status: subscription.status === 'active' ? 'active' : subscription.status,
-      current_period_start: sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null,
-      current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null
-    }, {
-      onConflict: 'user_id'
+      details: { action: 'subscription_cancelled' },
+      severity: 'low'
     })
-
-  console.log(`Updated subscription for user ${userId} to ${planType}`)
+  } catch (error) {
+    console.error('Error handling subscription cancellation:', error)
+  }
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer as string
-  
-  // Update subscription status to canceled
-  await supabaseAdmin
-    .from('user_subscriptions')
-    .update({
-      status: 'canceled',
-      stripe_subscription_id: null
+// Handle successful payment
+async function handlePaymentSuccess(invoice: Stripe.Invoice) {
+  try {
+    const customerId = invoice.customer as string
+    const userId = await getUserIdFromCustomer(customerId)
+    
+    if (!userId) return
+
+    // Reset usage for new billing period
+    const today = new Date().toISOString().split('T')[0]
+    await supabaseAdmin
+      .from('user_usage')
+      .update({ usage_count: 0, last_reset_date: today })
+      .eq('user_id', userId)
+
+    await logSecurityEvent({
+      timestamp: new Date().toISOString(),
+      event_type: 'api_access',
+      user_id: userId,
+      details: { 
+        action: 'payment_succeeded',
+        amount: invoice.amount_paid
+      },
+      severity: 'low'
     })
-    .eq('stripe_customer_id', customerId)
-
-  console.log(`Canceled subscription for customer ${customerId}`)
+  } catch (error) {
+    console.error('Error handling payment success:', error)
+  }
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  const customerId = invoice.customer as string
-  
-  // Ensure subscription is marked as active
-  await supabaseAdmin
-    .from('user_subscriptions')
-    .update({ status: 'active' })
-    .eq('stripe_customer_id', customerId)
+// Handle failed payment
+async function handlePaymentFailedWebhook(invoice: Stripe.Invoice) {
+  try {
+    const customerId = invoice.customer as string
+    const userId = await getUserIdFromCustomer(customerId)
+    
+    if (!userId) return
 
-  console.log(`Payment succeeded for customer ${customerId}`)
+    const attemptCount = invoice.attempt_count || 0
+    const result = await handlePaymentFailure(userId, attemptCount)
+
+    await logSecurityEvent({
+      timestamp: new Date().toISOString(),
+      event_type: 'api_access',
+      user_id: userId,
+      details: { 
+        action: 'payment_failed',
+        attempt: attemptCount,
+        result: result.action,
+        amount: invoice.amount_due
+      },
+      severity: attemptCount >= 3 ? 'high' : 'medium'
+    })
+  } catch (error) {
+    console.error('Error handling payment failure:', error)
+  }
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const customerId = invoice.customer as string
-  
-  // Mark subscription as past_due
-  await supabaseAdmin
-    .from('user_subscriptions')
-    .update({ status: 'past_due' })
-    .eq('stripe_customer_id', customerId)
+// Get user ID from Stripe customer ID
+async function getUserIdFromCustomer(customerId: string): Promise<string | null> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('user_subscriptions')
+      .select('user_id')
+      .eq('stripe_customer_id', customerId)
+      .single()
 
-  console.log(`Payment failed for customer ${customerId}`)
+    return data?.user_id || null
+  } catch (error) {
+    console.error('Error getting user from customer:', error)
+    return null
+  }
+}
+
+// Map Stripe subscription to plan type
+function getPlanTypeFromSubscription(subscription: Stripe.Subscription): 'essential' | 'professional' {
+  const priceId = subscription.items.data[0]?.price.id
+  
+  if (priceId === process.env.STRIPE_PROFESSIONAL_PRICE_ID) {
+    return 'professional'
+  }
+  
+  return 'essential' // Default to essential
 }

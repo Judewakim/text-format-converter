@@ -1,51 +1,41 @@
-// Supabase client configuration - provides database clients and TypeScript types
-// Handles user subscriptions, usage tracking, and trial management
+// Supabase client for security logging
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-// Client for browser/frontend use
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-// Admin client for server-side operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-})
-
-// Database types
-export interface UserSubscription {
-  id: string
-  user_id: string
-  stripe_customer_id?: string
-  stripe_subscription_id?: string
-  plan_type: 'free' | 'essential' | 'professional'
-  status: 'active' | 'canceled' | 'past_due' | 'incomplete'
-  current_period_start?: string
-  current_period_end?: string
-  created_at: string
-  updated_at: string
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.warn('Supabase credentials missing - security logs will use file fallback')
 }
 
-export interface UserUsage {
-  id: string
-  user_id: string
-  tool_name: string
-  usage_count: number
-  last_reset_date: string
-  created_at: string
-  updated_at: string
-}
+export const supabaseAdmin = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null
 
-export interface UserTrial {
-  id: string
-  user_id: string
-  total_uses_remaining: number
-  tools_used: Record<string, number>
-  created_at: string
-  updated_at: string
-}
+// Client-side Supabase client (for SubscriptionProvider)
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+export const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
+
+// SQL to create security_logs table in Supabase:
+/*
+CREATE TABLE security_logs (
+  id BIGSERIAL PRIMARY KEY,
+  timestamp TIMESTAMPTZ NOT NULL,
+  event_type TEXT NOT NULL,
+  user_id TEXT,
+  ip_address TEXT,
+  user_agent TEXT,
+  endpoint TEXT,
+  details JSONB,
+  severity TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_security_logs_timestamp ON security_logs(timestamp);
+CREATE INDEX idx_security_logs_event_type ON security_logs(event_type);
+CREATE INDEX idx_security_logs_user_id ON security_logs(user_id);
+CREATE INDEX idx_security_logs_severity ON security_logs(severity);
+*/

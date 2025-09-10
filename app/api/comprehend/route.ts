@@ -1,13 +1,17 @@
 // Text analysis API route - analyzes sentiment, entities, and key phrases using OpenAI GPT-4
 // Provides comprehensive text understanding with structured JSON responses
 import { NextRequest, NextResponse } from 'next/server'
+import { secureApiHandler } from '@/lib/secure-api-wrapper'
+import { validateText } from '@/lib/input-validator'
 
 export async function POST(request: NextRequest) {
-  try {
+  return secureApiHandler(request, 'comprehend', async (user, request) => {
     const { text } = await request.json()
 
-    if (!text) {
-      return NextResponse.json({ error: 'Text is required' }, { status: 400 })
+    // Input validation
+    const textValidation = validateText(text)
+    if (!textValidation.isValid) {
+      return NextResponse.json({ error: textValidation.errors[0] }, { status: 400 })
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -22,7 +26,7 @@ export async function POST(request: NextRequest) {
           role: 'user',
           content: `Analyze this text and return a JSON response with sentiment analysis, entities, and key phrases:
 
-Text: "${text}"
+Text: "${textValidation.sanitized}"
 
 Return format:
 {
@@ -53,8 +57,5 @@ Return format:
     const analysis = JSON.parse(analysisText)
     
     return NextResponse.json(analysis)
-  } catch (error: any) {
-    console.error('OpenAI API error:', error.message)
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
-  }
+  })
 }

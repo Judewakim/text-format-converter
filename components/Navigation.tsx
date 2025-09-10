@@ -64,20 +64,20 @@ export default function Navigation({ showBackButton = false, title }: Navigation
                 <button
                   onClick={() => {
                     setShowProfileMenu(false)
-                    // Add profile navigation here
+                    router.push('/dashboard/account')
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  Profile Settings
+                  Account Settings
                 </button>
                 <button
                   onClick={() => {
                     setShowProfileMenu(false)
-                    // Add billing navigation here
+                    router.push('/dashboard')
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  Billing & Payment
+                  Dashboard
                 </button>
                 <hr className="my-1" />
                 <button

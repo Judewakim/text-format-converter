@@ -3,7 +3,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { getCurrentUser, AuthUser } from 'aws-amplify/auth'
+import { getCurrentUser, AuthUser, fetchAuthSession } from 'aws-amplify/auth'
 import { Amplify } from 'aws-amplify'
 import awsconfig from '@/src/aws-exports'
 
@@ -13,11 +13,13 @@ Amplify.configure(awsconfig)
 interface AuthContextType {
   user: AuthUser | null
   loading: boolean
+  getAuthToken: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: true
+  loading: true,
+  getAuthToken: async () => null
 })
 
 export const useAuth = () => useContext(AuthContext)
@@ -41,8 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function getAuthToken(): Promise<string | null> {
+    try {
+      const session = await fetchAuthSession()
+      return session.tokens?.accessToken?.toString() || null
+    } catch (error) {
+      console.error('Error getting auth token:', error)
+      return null
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, getAuthToken }}>
       {children}
     </AuthContext.Provider>
   )

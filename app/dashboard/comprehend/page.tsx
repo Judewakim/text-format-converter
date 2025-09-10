@@ -6,6 +6,9 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { DocumentTextIcon } from '@heroicons/react/24/outline'
 import Navigation from '@/components/Navigation'
+import UpgradeModal from '@/components/UpgradeModal'
+import { useAuthenticatedApi } from '@/lib/api-client'
+import AuthenticatedToolWrapper from '@/components/AuthenticatedToolWrapper'
 
 interface AnalysisResult {
   sentiment: {
@@ -24,24 +27,29 @@ interface AnalysisResult {
 }
 
 export default function ComprehendPage() {
+  const { makeToolRequest } = useAuthenticatedApi()
   const [text, setText] = useState('')
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState('')
+  const [usesRemaining, setUsesRemaining] = useState<number | undefined>()
 
   const analyzeText = async () => {
     if (!text.trim()) return
     
     setIsLoading(true)
     try {
-      const response = await fetch('/api/comprehend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+      const result = await makeToolRequest('/api/comprehend', { text }, (reason, remaining) => {
+        setUpgradeReason(reason)
+        setUsesRemaining(remaining)
+        setShowUpgrade(true)
       })
       
-      const data = await response.json()
-      if (response.ok) {
-        setAnalysis(data)
+      if (result.success && result.data) {
+        setAnalysis(result.data)
+      } else if (!result.upgradeRequired) {
+        console.error('Analysis error:', result.error)
       }
     } catch (error) {
       console.error('Analysis error:', error)
@@ -60,8 +68,9 @@ export default function ComprehendPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-orange-50">
-      <Navigation showBackButton={true} title="Text Analysis" />
+    <AuthenticatedToolWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-orange-50">
+        <Navigation showBackButton={true} title="Text Analysis" />
       <div className="container mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -150,6 +159,14 @@ export default function ComprehendPage() {
           </div>
         </motion.div>
       </div>
+      
+      <UpgradeModal 
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        reason={upgradeReason}
+        usesRemaining={usesRemaining}
+      />
     </div>
+    </AuthenticatedToolWrapper>
   )
 }
