@@ -6,12 +6,19 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { PhotoIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import Navigation from '@/components/Navigation'
+import UpgradeModal from '@/components/UpgradeModal'
+import { useAuthenticatedApi } from '@/lib/api-client'
+import AuthenticatedToolWrapper from '@/components/AuthenticatedToolWrapper'
 
 export default function OCRPage() {
+  const { makeFileRequest } = useAuthenticatedApi()
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [extractedText, setExtractedText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState('')
+  const [usesRemaining, setUsesRemaining] = useState<number | undefined>()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -33,14 +40,16 @@ export default function OCRPage() {
       const formData = new FormData()
       formData.append('image', imageFile)
       
-      const response = await fetch('/api/ocr', {
-        method: 'POST',
-        body: formData
+      const result = await makeFileRequest('/api/ocr', formData, (reason, remaining) => {
+        setUpgradeReason(reason)
+        setUsesRemaining(remaining)
+        setShowUpgrade(true)
       })
       
-      const data = await response.json()
-      if (response.ok) {
-        setExtractedText(data.extractedText)
+      if (result.success && result.data) {
+        setExtractedText(result.data.extractedText)
+      } else if (!result.upgradeRequired) {
+        console.error('OCR error:', result.error)
       }
     } catch (error) {
       console.error('OCR error:', error)
@@ -50,8 +59,9 @@ export default function OCRPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-yellow-50">
-      <Navigation showBackButton={true} title="OCR" />
+    <AuthenticatedToolWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-yellow-50">
+        <Navigation showBackButton={true} title="OCR" />
       <div className="container mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -118,6 +128,14 @@ export default function OCRPage() {
           </div>
         </motion.div>
       </div>
+      
+      <UpgradeModal 
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        reason={upgradeReason}
+        usesRemaining={usesRemaining}
+      />
     </div>
+    </AuthenticatedToolWrapper>
   )
 }

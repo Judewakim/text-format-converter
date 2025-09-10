@@ -6,11 +6,18 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { MicrophoneIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import Navigation from '@/components/Navigation'
+import UpgradeModal from '@/components/UpgradeModal'
+import { useAuthenticatedApi } from '@/lib/api-client'
+import AuthenticatedToolWrapper from '@/components/AuthenticatedToolWrapper'
 
 export default function TranscribePage() {
+  const { makeFileRequest } = useAuthenticatedApi()
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [transcription, setTranscription] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState('')
+  const [usesRemaining, setUsesRemaining] = useState<number | undefined>()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -26,14 +33,16 @@ export default function TranscribePage() {
       const formData = new FormData()
       formData.append('audio', audioFile)
       
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData
+      const result = await makeFileRequest('/api/transcribe', formData, (reason, remaining) => {
+        setUpgradeReason(reason)
+        setUsesRemaining(remaining)
+        setShowUpgrade(true)
       })
       
-      const data = await response.json()
-      if (response.ok) {
-        setTranscription(data.transcription)
+      if (result.success && result.data) {
+        setTranscription(result.data.transcription)
+      } else if (!result.upgradeRequired) {
+        console.error('Transcription error:', result.error)
       }
     } catch (error) {
       console.error('Transcription error:', error)
@@ -43,8 +52,9 @@ export default function TranscribePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-green-50">
-      <Navigation showBackButton={true} title="Speech to Text" />
+    <AuthenticatedToolWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-green-50">
+        <Navigation showBackButton={true} title="Speech to Text" />
       <div className="container mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -104,6 +114,14 @@ export default function TranscribePage() {
           </div>
         </motion.div>
       </div>
+      
+      <UpgradeModal 
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        reason={upgradeReason}
+        usesRemaining={usesRemaining}
+      />
     </div>
+    </AuthenticatedToolWrapper>
   )
 }

@@ -7,32 +7,40 @@ import { motion } from 'framer-motion'
 import { LanguageIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
 import { supportedLanguages } from '@/lib/aws-services'
 import Navigation from '@/components/Navigation'
+import UpgradeModal from '@/components/UpgradeModal'
+import { useAuthenticatedApi } from '@/lib/api-client'
+import AuthenticatedToolWrapper from '@/components/AuthenticatedToolWrapper'
 
 export default function TranslatePage() {
+  const { makeToolRequest } = useAuthenticatedApi()
   const [sourceText, setSourceText] = useState('')
   const [translatedText, setTranslatedText] = useState('')
   const [sourceLang, setSourceLang] = useState('en')
   const [targetLang, setTargetLang] = useState('es')
   const [isLoading, setIsLoading] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState('')
+  const [usesRemaining, setUsesRemaining] = useState<number | undefined>()
 
   const translateText = async () => {
     if (!sourceText.trim()) return
     
     setIsLoading(true)
     try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: sourceText,
-          sourceLanguage: sourceLang,
-          targetLanguage: targetLang
-        })
+      const result = await makeToolRequest('/api/translate', {
+        text: sourceText,
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang
+      }, (reason, remaining) => {
+        setUpgradeReason(reason)
+        setUsesRemaining(remaining)
+        setShowUpgrade(true)
       })
       
-      const data = await response.json()
-      if (response.ok) {
-        setTranslatedText(data.translatedText)
+      if (result.success && result.data) {
+        setTranslatedText(result.data.translatedText)
+      } else if (!result.upgradeRequired) {
+        console.error('Translation error:', result.error)
       }
     } catch (error) {
       console.error('Translation error:', error)
@@ -49,8 +57,9 @@ export default function TranslatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-purple-50">
-      <Navigation showBackButton={true} title="Translation" />
+    <AuthenticatedToolWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-purple-50">
+        <Navigation showBackButton={true} title="Translation" />
       <div className="container mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -142,6 +151,14 @@ export default function TranslatePage() {
           </div>
         </motion.div>
       </div>
+      
+      <UpgradeModal 
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        reason={upgradeReason}
+        usesRemaining={usesRemaining}
+      />
     </div>
+    </AuthenticatedToolWrapper>
   )
 }

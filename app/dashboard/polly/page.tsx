@@ -7,8 +7,12 @@ import { motion } from 'framer-motion'
 import { SpeakerWaveIcon, PlayIcon, PauseIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { pollyVoices } from '@/lib/aws-services'
 import Navigation from '@/components/Navigation'
+import UpgradeModal from '@/components/UpgradeModal'
+import { useAuthenticatedApi } from '@/lib/api-client'
+import AuthenticatedToolWrapper from '@/components/AuthenticatedToolWrapper'
 
 export default function PollyPage() {
+  const { makeFileRequest } = useAuthenticatedApi()
   const [text, setText] = useState('')
   const [selectedVoice, setSelectedVoice] = useState('pNInz6obpgDQGcFmaJgB')
   const [isLoading, setIsLoading] = useState(false)
@@ -19,29 +23,34 @@ export default function PollyPage() {
   const [similarityBoost, setSimilarityBoost] = useState(0.5)
   const [style, setStyle] = useState(0.0)
   const [speakerBoost, setSpeakerBoost] = useState(true)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState('')
+  const [usesRemaining, setUsesRemaining] = useState<number | undefined>()
 
   const synthesizeSpeech = async () => {
     if (!text.trim()) return
     
     setIsLoading(true)
     try {
-      const response = await fetch('/api/polly', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text, 
-          voiceId: selectedVoice,
-          stability,
-          similarityBoost,
-          style,
-          speakerBoost
-        })
+      const formData = new FormData()
+      formData.append('text', text)
+      formData.append('voiceId', selectedVoice)
+      formData.append('stability', stability.toString())
+      formData.append('similarityBoost', similarityBoost.toString())
+      formData.append('style', style.toString())
+      formData.append('speakerBoost', speakerBoost.toString())
+      
+      const result = await makeFileRequest('/api/polly', formData, (reason, remaining) => {
+        setUpgradeReason(reason)
+        setUsesRemaining(remaining)
+        setShowUpgrade(true)
       })
       
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
+      if (result.success && result.data) {
+        const url = URL.createObjectURL(result.data as Blob)
         setAudioUrl(url)
+      } else if (!result.upgradeRequired) {
+        console.error('Error synthesizing speech:', result.error)
       }
     } catch (error) {
       console.error('Error synthesizing speech:', error)
@@ -83,8 +92,9 @@ export default function PollyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50">
-      <Navigation showBackButton={true} title="Text to Speech" />
+    <AuthenticatedToolWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50">
+        <Navigation showBackButton={true} title="Text to Speech" />
       <div className="container mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -243,6 +253,14 @@ export default function PollyPage() {
           </div>
         </motion.div>
       </div>
+      
+      <UpgradeModal 
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        reason={upgradeReason}
+        usesRemaining={usesRemaining}
+      />
     </div>
+    </AuthenticatedToolWrapper>
   )
 }

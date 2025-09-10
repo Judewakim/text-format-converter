@@ -1,9 +1,11 @@
 // Document analysis API route - analyzes document images using OpenAI GPT-4 Vision
 // Extracts structured data, entities, and insights from document images
 import { NextRequest, NextResponse } from 'next/server'
+import { secureApiHandler } from '@/lib/secure-api-wrapper'
+import { validateFile } from '@/lib/input-validator'
 
 export async function POST(request: NextRequest) {
-  try {
+  return secureApiHandler(request, 'document-analysis', async (user, request) => {
     const formData = await request.formData()
     const documentFile = formData.get('document') as File
 
@@ -11,14 +13,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Document file is required' }, { status: 400 })
     }
     
-    // Check if file is an image
-    if (!documentFile.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'Only image files are supported (PNG, JPG, JPEG, GIF, WebP)' }, { status: 400 })
-    }
-    
-    // Check file size (OpenAI has a 20MB limit)
-    if (documentFile.size > 20 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File size must be less than 20MB' }, { status: 400 })
+    // Validate document file
+    const fileValidation = validateFile(
+      documentFile, 
+      ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'], 
+      20 * 1024 * 1024 // 20MB limit
+    )
+    if (!fileValidation.isValid) {
+      return NextResponse.json({ error: fileValidation.errors[0] }, { status: 400 })
     }
 
     // Convert file to base64
@@ -83,11 +85,5 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(analysis)
-  } catch (error: any) {
-    console.error('Document Analysis API error:', error.message)
-    return NextResponse.json({ 
-      error: 'Document analysis failed', 
-      details: error.message 
-    }, { status: 500 })
-  }
+  })
 }

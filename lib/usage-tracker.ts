@@ -1,23 +1,101 @@
 // Usage tracking utilities - manages user access limits and subscription enforcement
 // Handles free trial limits, subscription tiers, and usage counting across all AI tools
 import { supabaseAdmin } from './supabase'
+import { checkFallbackAccess, incrementFallbackUsage, getQueuedUsage, clearUsageQueue } from './fallback-tracker'
+import { logSecurityEvent } from './security-logger'
+import { getUserPlan, setFallbackPlan } from './subscription-manager'
+
+// Database health tracking
+let isDatabaseHealthy = true
+let lastHealthCheck = 0
+const HEALTH_CHECK_INTERVAL = 30000 // 30 seconds
+
+// Check database health
+async function checkDatabaseHealth(): Promise<boolean> {
+  const now = Date.now()
+  if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
+    return isDatabaseHealthy
+  }
+  
+  try {
+    await supabaseAdmin.from('user_trials').select('count').limit(1)
+    isDatabaseHealthy = true
+    lastHealthCheck = now
+    
+    // Try to sync queued usage if DB is back online
+    if (isDatabaseHealthy) {
+      await syncQueuedUsage()
+    }
+  } catch (error) {
+    isDatabaseHealthy = false
+    lastHealthCheck = now
+    await logSecurityEvent({
+      timestamp: new Date().toISOString(),
+      event_type: 'api_access',
+      details: { error: 'Database health check failed' },
+      severity: 'high'
+    })
+  }
+  
+  return isDatabaseHealthy
+}
+
+// Sync queued usage data when database recovers
+async function syncQueuedUsage(): Promise<void> {
+  const queuedUsage = getQueuedUsage()
+  if (queuedUsage.length === 0) return
+  
+  try {
+    for (const usage of queuedUsage) {
+      await incrementUsage(usage.userId, usage.toolName)
+    }
+    clearUsageQueue()
+  } catch (error) {
+    console.error('Failed to sync queued usage:', error)
+  }
+}
 
 export async function checkUserAccess(userId: string, toolName: string) {
+  // Development mode - always allow 6 free uses
+  if (process.env.NODE_ENV === 'development') {
+    const fallbackAccess = checkFallbackAccess(userId, toolName)
+    return {
+      canUse: fallbackAccess.canUse,
+      reason: fallbackAccess.canUse 
+        ? `Development mode (${fallbackAccess.remaining} uses remaining this session)` 
+        : 'Session limit reached (6 uses per restart in development).',
+      usesRemaining: fallbackAccess.remaining,
+      fallbackMode: true
+    }
+  }
+  
+  // Check database health first
+  const dbHealthy = await checkDatabaseHealth()
+  
+  if (!dbHealthy) {
+    // Use fallback system
+    const fallbackAccess = checkFallbackAccess(userId, toolName)
+    return {
+      canUse: fallbackAccess.canUse,
+      reason: fallbackAccess.canUse 
+        ? `Limited access (${fallbackAccess.remaining} uses remaining this session)` 
+        : 'Session limit reached. Database temporarily unavailable.',
+      usesRemaining: fallbackAccess.remaining,
+      fallbackMode: true
+    }
+  }
+  
   try {
-    // 1. Check if user has active subscription
-    const { data: subscription } = await supabaseAdmin
-      .from('user_subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
+    // Get user's plan (with fallback support)
+    const planType = await getUserPlan(userId)
 
     // If user has Professional plan, allow unlimited access
-    if (subscription?.plan_type === 'professional' && subscription?.status === 'active') {
+    if (planType === 'professional') {
       return { canUse: true, reason: 'unlimited' }
     }
 
     // If user has Essential plan, check monthly usage
-    if (subscription?.plan_type === 'essential' && subscription?.status === 'active') {
+    if (planType === 'essential') {
       const { data: usage } = await supabaseAdmin
         .from('user_usage')
         .select('usage_count')
@@ -76,25 +154,46 @@ export async function checkUserAccess(userId: string, toolName: string) {
 
   } catch (error) {
     console.error('Error checking user access:', error)
-    return { canUse: false, reason: 'Error checking access' }
+    
+    // Fallback to in-memory tracking on database error
+    const fallbackAccess = checkFallbackAccess(userId, toolName)
+    return {
+      canUse: fallbackAccess.canUse,
+      reason: fallbackAccess.canUse 
+        ? `Limited access (${fallbackAccess.remaining} uses remaining this session)` 
+        : 'Session limit reached. Please try again later.',
+      usesRemaining: fallbackAccess.remaining,
+      fallbackMode: true
+    }
   }
 }
 
 export async function incrementUsage(userId: string, toolName: string) {
+  // Development mode - use fallback system
+  if (process.env.NODE_ENV === 'development') {
+    incrementFallbackUsage(userId, toolName)
+    return { success: true, fallbackMode: true }
+  }
+  
+  // Check database health first
+  const dbHealthy = await checkDatabaseHealth()
+  
+  if (!dbHealthy) {
+    // Use fallback system
+    incrementFallbackUsage(userId, toolName)
+    return { success: true, fallbackMode: true }
+  }
+  
   try {
-    // Check subscription status
-    const { data: subscription } = await supabaseAdmin
-      .from('user_subscriptions')
-      .select('plan_type, status')
-      .eq('user_id', userId)
-      .single()
+    // Get user's plan (with fallback support)
+    const planType = await getUserPlan(userId)
 
-    if (subscription?.plan_type === 'professional' && subscription?.status === 'active') {
+    if (planType === 'professional') {
       // Professional users have unlimited usage, no need to track
       return { success: true }
     }
 
-    if (subscription?.plan_type === 'essential' && subscription?.status === 'active') {
+    if (planType === 'essential') {
       // Increment monthly usage for Essential users
       const today = new Date().toISOString().split('T')[0]
       
@@ -136,6 +235,9 @@ export async function incrementUsage(userId: string, toolName: string) {
     return { success: true }
   } catch (error) {
     console.error('Error incrementing usage:', error)
-    return { success: false, error }
+    
+    // Fallback to in-memory tracking on database error
+    incrementFallbackUsage(userId, toolName)
+    return { success: true, fallbackMode: true }
   }
 }

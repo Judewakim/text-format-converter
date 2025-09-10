@@ -2,6 +2,8 @@
 // Wraps all pages with authentication context and applies global styles
 import './globals.css'
 import { AuthProvider } from '@/components/AuthProvider'
+import { SubscriptionProvider } from '@/components/SubscriptionProvider'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export const metadata = {
   title: 'AI Text Tools Dashboard',
@@ -21,9 +23,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sf">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <SubscriptionProvider>
+              {children}
+            </SubscriptionProvider>
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
