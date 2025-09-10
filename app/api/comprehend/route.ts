@@ -1,3 +1,5 @@
+// Text analysis API route - analyzes sentiment, entities, and key phrases using OpenAI GPT-4
+// Provides comprehensive text understanding with structured JSON responses
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

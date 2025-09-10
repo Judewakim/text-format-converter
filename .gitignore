@@ -1,3 +1,6 @@
+# Git ignore file - specifies which files and directories Git should ignore
+# Prevents committing sensitive data, build artifacts, and temporary files
+
 # Dependencies
 /node_modules
 /.pnp

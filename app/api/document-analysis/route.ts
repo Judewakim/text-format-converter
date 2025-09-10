@@ -1,3 +1,5 @@
+// Document analysis API route - analyzes document images using OpenAI GPT-4 Vision
+// Extracts structured data, entities, and insights from document images
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

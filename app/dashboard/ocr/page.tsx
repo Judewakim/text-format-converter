@@ -1,3 +1,5 @@
+// OCR tool page - extracts text from images using Google Vision API
+// Features image upload, preview, and extracted text display
 'use client'
 
 import { useState } from 'react'

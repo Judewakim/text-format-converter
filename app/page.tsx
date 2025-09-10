@@ -1,3 +1,5 @@
+// Landing page component - main entry point showcasing AI tools and features
+// Displays hero section, feature grid, and call-to-action for user registration
 'use client'
 
 import { motion } from 'framer-motion'

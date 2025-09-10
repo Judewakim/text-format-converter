@@ -1,3 +1,5 @@
+// Dashboard home page - displays grid of available AI tools with navigation
+// Protected route that requires authentication and shows tool selection interface
 'use client'
 
 import { useAuth } from '@/components/AuthProvider'

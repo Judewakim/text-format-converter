@@ -1,3 +1,5 @@
+// OCR API route - extracts text from images using Google Vision API
+// Processes uploaded images and returns detected text content
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

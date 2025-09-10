@@ -1,3 +1,5 @@
+// AWS services configuration - initializes AWS SDK clients and service constants
+// Provides configured clients for Polly, Translate, Comprehend, Rekognition, and Textract
 import { Polly } from '@aws-sdk/client-polly'
 import { Translate } from '@aws-sdk/client-translate'
 import { Comprehend } from '@aws-sdk/client-comprehend'

@@ -1,3 +1,5 @@
+// Usage tracking utilities - manages user access limits and subscription enforcement
+// Handles free trial limits, subscription tiers, and usage counting across all AI tools
 import { supabaseAdmin } from './supabase'
 
 export async function checkUserAccess(userId: string, toolName: string) {

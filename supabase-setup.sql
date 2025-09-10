@@ -1,3 +1,6 @@
+-- Supabase database setup script - creates tables for user management and billing
+-- Defines subscription tracking, usage limits, and trial management
+
 -- Create user_subscriptions table
 CREATE TABLE user_subscriptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

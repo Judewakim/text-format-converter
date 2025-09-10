@@ -1,3 +1,5 @@
+// AWS Amplify configuration - defines authentication and AWS service settings
+// Configures Cognito user pools, identity pools, and authentication flow
 const awsconfig = {
   aws_project_region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1',
   aws_cognito_region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1',

@@ -1,3 +1,5 @@
+// Speech-to-Text tool page - transcribes audio files using OpenAI Whisper
+// Handles audio file upload and displays accurate transcription results
 'use client'
 
 import { useState } from 'react'

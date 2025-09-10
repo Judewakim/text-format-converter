@@ -1,3 +1,5 @@
+// Speech-to-Text API route - transcribes audio files using OpenAI Whisper
+// Converts uploaded audio files to accurate text transcriptions
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

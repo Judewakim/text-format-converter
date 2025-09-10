@@ -1,3 +1,5 @@
+// Document analysis tool page - analyzes document images using AI vision
+// Extracts structured data, entities, and provides intelligent document understanding
 'use client'
 
 import { useState } from 'react'

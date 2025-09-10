@@ -1,3 +1,5 @@
+// Text-to-Speech API route - converts text to audio using ElevenLabs API
+// Handles voice selection, audio settings, and returns MP3 audio files
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

@@ -1,3 +1,6 @@
+/* Global CSS styles - defines base styles, components, and utilities for the application */
+/* Includes Tailwind CSS imports and custom Apple-inspired design system */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

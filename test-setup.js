@@ -1,3 +1,9 @@
+// Setup verification script - validates environment configuration and database connectivity
+// Tests Supabase connection, environment variables, and database table structure
+
+// Load environment variables
+require('dotenv').config({ path: '.env.local' })
+
 // Test script to verify setup
 const { createClient } = require('@supabase/supabase-js')
 

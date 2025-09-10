@@ -1,3 +1,5 @@
+// TypeScript configuration - defines compiler options and project structure
+// Configures type checking, module resolution, and build settings
 {
   "compilerOptions": {
     "target": "es5",

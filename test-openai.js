@@ -1,3 +1,6 @@
+// Test script for OpenAI API connectivity - validates API key and basic functionality
+// Used for debugging and verifying OpenAI integration during development
+
 // Quick test to check if OpenAI API key works
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args))
 

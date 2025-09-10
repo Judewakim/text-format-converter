@@ -1,3 +1,5 @@
+// Authentication page - handles user login and registration using AWS Cognito
+// Provides secure authentication flow with automatic redirect to dashboard
 'use client'
 
 import { Authenticator } from '@aws-amplify/ui-react'

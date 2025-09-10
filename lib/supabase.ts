@@ -1,3 +1,5 @@
+// Supabase client configuration - provides database clients and TypeScript types
+// Handles user subscriptions, usage tracking, and trial management
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.SUPABASE_URL!
