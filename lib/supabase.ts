@@ -5,19 +5,19 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('Supabase credentials missing - security logs will use file fallback')
+  throw new Error('Missing required Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY')
 }
 
-export const supabaseAdmin = supabaseUrl && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 // Client-side Supabase client (for SubscriptionProvider)
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
+if (!supabaseAnonKey) {
+  throw new Error('Missing required Supabase environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // SQL to create security_logs table in Supabase:
 /*
