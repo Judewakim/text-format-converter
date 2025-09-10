@@ -4,12 +4,16 @@ import { setFallbackPlan } from './subscription-manager'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20'
+  apiVersion: '2025-08-27.basil'
 })
 
 // Sync subscription status from Stripe
 export async function syncSubscriptionStatus(userId: string): Promise<{ success: boolean; planType?: string; status?: string }> {
   try {
+    if (!supabaseAdmin) {
+      return { success: false }
+    }
+    
     const { data: subscription } = await supabaseAdmin
       .from('user_subscriptions')
       .select('stripe_customer_id, stripe_subscription_id')
@@ -45,8 +49,8 @@ export async function syncSubscriptionStatus(userId: string): Promise<{ success:
       .update({
         plan_type: planType,
         status: status,
-        current_period_start: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+        current_period_start: (stripeSubscription as any).current_period_start ? new Date((stripeSubscription as any).current_period_start * 1000).toISOString() : null,
+        current_period_end: (stripeSubscription as any).current_period_end ? new Date((stripeSubscription as any).current_period_end * 1000).toISOString() : null,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId)
@@ -93,6 +97,10 @@ function getStatusFromStripe(stripeStatus: string): 'active' | 'inactive' | 'pas
 // Batch sync all active subscriptions (for maintenance)
 export async function batchSyncSubscriptions(): Promise<void> {
   try {
+    if (!supabaseAdmin) {
+      return
+    }
+    
     const { data: subscriptions } = await supabaseAdmin
       .from('user_subscriptions')
       .select('user_id, stripe_subscription_id')

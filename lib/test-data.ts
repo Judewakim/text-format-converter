@@ -5,6 +5,11 @@ export async function setupTestUser() {
   const testUserId = 'test_user_123'
   
   try {
+    if (!supabaseAdmin) {
+      console.error('❌ Supabase not available')
+      return null
+    }
+    
     // Create test user with 2 uses remaining (to test limits quickly)
     await supabaseAdmin
       .from('user_trials')
@@ -28,6 +33,11 @@ export async function resetTestUser() {
   const testUserId = 'test_user_123'
   
   try {
+    if (!supabaseAdmin) {
+      console.error('❌ Supabase not available')
+      return null
+    }
+    
     // Reset test user to 6 uses
     await supabaseAdmin
       .from('user_trials')
@@ -49,6 +59,11 @@ export async function checkTestUserStatus() {
   const testUserId = 'test_user_123'
   
   try {
+    if (!supabaseAdmin) {
+      console.error('❌ Supabase not available')
+      return null
+    }
+    
     const { data: trial } = await supabaseAdmin
       .from('user_trials')
       .select('*')
