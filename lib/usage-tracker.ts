@@ -18,6 +18,10 @@ async function checkDatabaseHealth(): Promise<boolean> {
   }
   
   try {
+    if (!supabaseAdmin) {
+      throw new Error('Supabase not configured')
+    }
+    
     await supabaseAdmin.from('user_trials').select('count').limit(1)
     isDatabaseHealthy = true
     lastHealthCheck = now
@@ -96,6 +100,16 @@ export async function checkUserAccess(userId: string, toolName: string) {
 
     // If user has Essential plan, check monthly usage
     if (planType === 'essential') {
+      if (!supabaseAdmin) {
+        const fallbackAccess = checkFallbackAccess(userId, toolName)
+        return {
+          canUse: fallbackAccess.canUse,
+          reason: fallbackAccess.canUse ? 'Limited access' : 'Session limit reached',
+          usesRemaining: fallbackAccess.remaining,
+          fallbackMode: true
+        }
+      }
+      
       const { data: usage } = await supabaseAdmin
         .from('user_usage')
         .select('usage_count')
@@ -123,6 +137,16 @@ export async function checkUserAccess(userId: string, toolName: string) {
     }
 
     // Check free trial usage
+    if (!supabaseAdmin) {
+      const fallbackAccess = checkFallbackAccess(userId, toolName)
+      return {
+        canUse: fallbackAccess.canUse,
+        reason: fallbackAccess.canUse ? 'Limited access' : 'Session limit reached',
+        usesRemaining: fallbackAccess.remaining,
+        fallbackMode: true
+      }
+    }
+    
     const { data: trial } = await supabaseAdmin
       .from('user_trials')
       .select('*')
@@ -194,6 +218,11 @@ export async function incrementUsage(userId: string, toolName: string) {
     }
 
     if (planType === 'essential') {
+      if (!supabaseAdmin) {
+        incrementFallbackUsage(userId, toolName)
+        return { success: true, fallbackMode: true }
+      }
+      
       // Increment monthly usage for Essential users
       const today = new Date().toISOString().split('T')[0]
       
@@ -213,6 +242,11 @@ export async function incrementUsage(userId: string, toolName: string) {
     }
 
     // Decrement free trial usage
+    if (!supabaseAdmin) {
+      incrementFallbackUsage(userId, toolName)
+      return { success: true, fallbackMode: true }
+    }
+    
     const { data: trial } = await supabaseAdmin
       .from('user_trials')
       .select('*')

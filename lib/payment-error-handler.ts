@@ -13,7 +13,7 @@ export interface PaymentErrorContext {
 
 // Handle Stripe-specific errors with detailed context
 export async function handleStripeError(
-  error: Stripe.StripeError,
+  error: any,
   context: PaymentErrorContext
 ): Promise<ErrorResponse> {
   
@@ -38,7 +38,7 @@ export async function handleStripeError(
 }
 
 // Generate user-friendly response for Stripe errors
-function generateStripeErrorResponse(error: Stripe.StripeError): ErrorResponse {
+function generateStripeErrorResponse(error: any): ErrorResponse {
   switch (error.code) {
     case 'card_declined':
       return {
@@ -100,7 +100,7 @@ function generateStripeErrorResponse(error: Stripe.StripeError): ErrorResponse {
 }
 
 // Get severity level for Stripe errors
-function getStripeErrorSeverity(error: Stripe.StripeError): 'low' | 'medium' | 'high' | 'critical' {
+function getStripeErrorSeverity(error: any): 'low' | 'medium' | 'high' | 'critical' {
   switch (error.type) {
     case 'api_error':
       return 'critical'
@@ -133,7 +133,7 @@ export async function retryPaymentOperation<T>(
       lastError = error
       
       // Don't retry certain Stripe errors
-      if (error instanceof Stripe.StripeError && !isRetryableStripeError(error)) {
+      if (error && (error as any).type && !isRetryableStripeError(error)) {
         throw error
       }
       
@@ -150,7 +150,7 @@ export async function retryPaymentOperation<T>(
 }
 
 // Check if Stripe error is retryable
-function isRetryableStripeError(error: Stripe.StripeError): boolean {
+function isRetryableStripeError(error: any): boolean {
   const retryableCodes = [
     'api_connection_error',
     'api_error',

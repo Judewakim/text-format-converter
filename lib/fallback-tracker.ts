@@ -49,6 +49,17 @@ export function clearUsageQueue(): void {
   usageQueue.length = 0
 }
 
+// Get fallback usage data for a user
+export function getFallbackUsage(userId: string): { totalUsed: number; toolUsage: SessionUsage } {
+  const userSession = sessionUsage.get(userId) || {}
+  const totalUsed = Object.values(userSession).reduce((sum, count) => sum + count, 0)
+  
+  return {
+    totalUsed,
+    toolUsage: userSession
+  }
+}
+
 // Clear session data (on logout or session end)
 export function clearSessionUsage(userId: string): void {
   sessionUsage.delete(userId)

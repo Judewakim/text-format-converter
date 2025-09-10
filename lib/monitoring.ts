@@ -23,6 +23,9 @@ export async function performHealthCheck(): Promise<SystemHealth> {
   try {
     const dbStart = Date.now()
     const { supabaseAdmin } = await import('./supabase')
+    if (!supabaseAdmin) {
+      throw new Error('Supabase not configured')
+    }
     await supabaseAdmin.from('user_trials').select('count').limit(1)
     checks.push({
       service: 'database',
@@ -41,7 +44,7 @@ export async function performHealthCheck(): Promise<SystemHealth> {
   try {
     const stripeStart = Date.now()
     const Stripe = (await import('stripe')).default
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-08-27.basil' })
     await stripe.products.list({ limit: 1 })
     checks.push({
       service: 'stripe',
@@ -151,8 +154,8 @@ export class PerformanceMonitor {
   static getMetrics(): Record<string, { avg: number; min: number; max: number; count: number }> {
     const result: Record<string, { avg: number; min: number; max: number; count: number }> = {}
     
-    for (const [name, values] of this.metrics.entries()) {
-      if (values.length === 0) continue
+    this.metrics.forEach((values, name) => {
+      if (values.length === 0) return
       
       result[name] = {
         avg: values.reduce((a, b) => a + b, 0) / values.length,
@@ -160,7 +163,7 @@ export class PerformanceMonitor {
         max: Math.max(...values),
         count: values.length
       }
-    }
+    })
     
     return result
   }

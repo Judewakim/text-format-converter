@@ -12,6 +12,10 @@ export interface PaymentFailureResult {
 // Handle payment failure with grace period logic
 export async function handlePaymentFailure(userId: string, attemptCount: number): Promise<PaymentFailureResult> {
   try {
+    if (!supabaseAdmin) {
+      return { action: 'no_action' }
+    }
+    
     const { data: subscription } = await supabaseAdmin
       .from('user_subscriptions')
       .select('*')
@@ -96,6 +100,10 @@ export async function handlePaymentFailure(userId: string, attemptCount: number)
 // Check and process expired grace periods
 export async function processExpiredGracePeriods(): Promise<void> {
   try {
+    if (!supabaseAdmin) {
+      return
+    }
+    
     const now = new Date().toISOString()
     
     const { data: expiredSubscriptions } = await supabaseAdmin

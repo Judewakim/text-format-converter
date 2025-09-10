@@ -10,7 +10,7 @@ import { validateWebhookSource, checkWebhookRateLimit } from '@/lib/webhook-vali
 import { handlePaymentFailure } from '@/lib/payment-failure-handler'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20'
+  apiVersion: '2025-08-27.basil'
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -102,6 +102,12 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       const planType = getPlanTypeFromSubscription(subscription)
       const status = subscription.status === 'active' ? 'active' : 'inactive'
 
+      // Check if supabase is available
+      if (!supabaseAdmin) {
+        console.error('Supabase not available for subscription update')
+        return
+      }
+      
       // Update database with retry logic
       await supabaseAdmin
         .from('user_subscriptions')
@@ -111,8 +117,8 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
           stripe_subscription_id: subscription.id,
           plan_type: planType,
           status: status,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          current_period_start: (subscription as any).current_period_start ? new Date((subscription as any).current_period_start * 1000).toISOString() : null,
+          current_period_end: (subscription as any).current_period_end ? new Date((subscription as any).current_period_end * 1000).toISOString() : null,
           updated_at: new Date().toISOString()
         })
 
@@ -155,6 +161,12 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     
     if (!userId) return
 
+    // Check if supabase is available
+    if (!supabaseAdmin) {
+      console.error('Supabase not available for subscription cancellation')
+      return
+    }
+    
     // Update to free plan
     await supabaseAdmin
       .from('user_subscriptions')
@@ -188,6 +200,12 @@ async function handlePaymentSuccess(invoice: Stripe.Invoice) {
     
     if (!userId) return
 
+    // Check if supabase is available
+    if (!supabaseAdmin) {
+      console.error('Supabase not available for usage reset')
+      return
+    }
+    
     // Reset usage for new billing period
     const today = new Date().toISOString().split('T')[0]
     await supabaseAdmin
@@ -241,6 +259,11 @@ async function handlePaymentFailedWebhook(invoice: Stripe.Invoice) {
 // Get user ID from Stripe customer ID
 async function getUserIdFromCustomer(customerId: string): Promise<string | null> {
   try {
+    if (!supabaseAdmin) {
+      console.error('Supabase not available for user lookup')
+      return null
+    }
+    
     const { data } = await supabaseAdmin
       .from('user_subscriptions')
       .select('user_id')

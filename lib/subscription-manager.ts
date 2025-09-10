@@ -4,7 +4,7 @@ import { supabaseAdmin } from './supabase'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20'
+  apiVersion: '2025-08-27.basil'
 })
 
 // Fallback plan detection when database is unavailable
@@ -23,6 +23,10 @@ export function getFallbackPlan(userId: string): 'free' | 'essential' | 'profess
 // Get user's current plan with fallback
 export async function getUserPlan(userId: string): Promise<'free' | 'essential' | 'professional'> {
   try {
+    if (!supabaseAdmin) {
+      return getFallbackPlan(userId)
+    }
+    
     const { data: subscription } = await supabaseAdmin
       .from('user_subscriptions')
       .select('plan_type, status')
@@ -46,6 +50,10 @@ export async function getUserPlan(userId: string): Promise<'free' | 'essential' 
 // Create or retrieve Stripe customer
 export async function getOrCreateStripeCustomer(userId: string, email: string): Promise<string> {
   try {
+    if (!supabaseAdmin) {
+      throw new Error('Database not available')
+    }
+    
     // Check if customer already exists in database
     const { data: existing } = await supabaseAdmin
       .from('user_subscriptions')

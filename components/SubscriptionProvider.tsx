@@ -18,9 +18,13 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const [subscription, setSubscription] = useState({
-    plan: 'free' as const,
-    status: 'active' as const,
+  const [subscription, setSubscription] = useState<{
+    plan: 'free' | 'essential' | 'professional'
+    status: 'active' | 'canceled' | 'past_due' | 'incomplete'
+    usesRemaining?: number
+  }>({
+    plan: 'free',
+    status: 'active',
     usesRemaining: 6
   })
   const [loading, setLoading] = useState(true)
@@ -33,6 +37,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     try {
+      // Check if supabase is available
+      if (!supabase) {
+        setSubscription({ plan: 'free', status: 'active', usesRemaining: 6 })
+        return
+      }
+      
       // Check subscription status
       const { data: subData } = await supabase
         .from('user_subscriptions')
@@ -42,7 +52,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       if (subData && subData.status === 'active') {
         setSubscription({
-          plan: subData.plan_type as 'essential' | 'professional',
+          plan: subData.plan_type as 'free' | 'essential' | 'professional',
           status: subData.status,
           usesRemaining: subData.plan_type === 'professional' ? undefined : 0
         })

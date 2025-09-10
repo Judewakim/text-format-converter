@@ -33,6 +33,13 @@ export async function GET(request: NextRequest) {
       // Get current plan (with fallback support)
       const planType = await getUserPlan(user.userId)
       
+      // Check if supabase is available
+      if (!supabaseAdmin) {
+        return NextResponse.json({
+          error: 'Database not available'
+        }, { status: 503 })
+      }
+      
       // Get detailed subscription info from database
       const { data: subscription } = await supabaseAdmin
         .from('user_subscriptions')

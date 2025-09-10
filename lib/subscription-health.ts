@@ -6,6 +6,10 @@ import { logSecurityEvent } from './security-logger'
 // Check for stale subscription data
 export async function checkSubscriptionHealth(): Promise<void> {
   try {
+    if (!supabaseAdmin) {
+      return
+    }
+    
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     
     // Find subscriptions not updated in the last hour
@@ -41,6 +45,10 @@ export async function checkSubscriptionHealth(): Promise<void> {
 // Detect subscription inconsistencies
 export async function detectSubscriptionInconsistencies(): Promise<void> {
   try {
+    if (!supabaseAdmin) {
+      return
+    }
+    
     // Find users with active subscriptions but no Stripe subscription ID
     const { data: inconsistentSubs } = await supabaseAdmin
       .from('user_subscriptions')
