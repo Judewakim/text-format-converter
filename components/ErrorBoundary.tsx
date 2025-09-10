@@ -55,6 +55,13 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-gray-600 mb-4">
               We encountered an unexpected error. Please refresh the page or try again later.
             </p>
+            {process.env.NODE_ENV !== 'production' && this.state.error && (
+              <details className="text-left text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded">
+                <summary className="cursor-pointer">Error Details</summary>
+                <pre className="mt-2 whitespace-pre-wrap">{this.state.error.message}</pre>
+                <pre className="mt-2 whitespace-pre-wrap text-xs">{this.state.error.stack}</pre>
+              </details>
+            )}
             <button
               onClick={() => window.location.reload()}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
