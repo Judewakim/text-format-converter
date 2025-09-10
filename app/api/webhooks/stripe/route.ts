@@ -102,6 +102,12 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       const planType = getPlanTypeFromSubscription(subscription)
       const status = subscription.status === 'active' ? 'active' : 'inactive'
 
+      // Check if supabase is available
+      if (!supabaseAdmin) {
+        console.error('Supabase not available for subscription update')
+        return
+      }
+      
       // Update database with retry logic
       await supabaseAdmin
         .from('user_subscriptions')
@@ -155,6 +161,12 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     
     if (!userId) return
 
+    // Check if supabase is available
+    if (!supabaseAdmin) {
+      console.error('Supabase not available for subscription cancellation')
+      return
+    }
+    
     // Update to free plan
     await supabaseAdmin
       .from('user_subscriptions')
@@ -188,6 +200,12 @@ async function handlePaymentSuccess(invoice: Stripe.Invoice) {
     
     if (!userId) return
 
+    // Check if supabase is available
+    if (!supabaseAdmin) {
+      console.error('Supabase not available for usage reset')
+      return
+    }
+    
     // Reset usage for new billing period
     const today = new Date().toISOString().split('T')[0]
     await supabaseAdmin
@@ -241,6 +259,11 @@ async function handlePaymentFailedWebhook(invoice: Stripe.Invoice) {
 // Get user ID from Stripe customer ID
 async function getUserIdFromCustomer(customerId: string): Promise<string | null> {
   try {
+    if (!supabaseAdmin) {
+      console.error('Supabase not available for user lookup')
+      return null
+    }
+    
     const { data } = await supabaseAdmin
       .from('user_subscriptions')
       .select('user_id')
