@@ -8,11 +8,7 @@ import { Amplify } from 'aws-amplify'
 import awsconfig from '@/src/aws-exports'
 
 // Configure Amplify on client side
-try {
-  Amplify.configure(awsconfig)
-} catch (error) {
-  console.error('Failed to configure Amplify:', error)
-}
+Amplify.configure(awsconfig)
 
 interface AuthContextType {
   user: AuthUser | null
