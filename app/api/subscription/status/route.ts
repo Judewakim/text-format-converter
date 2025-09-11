@@ -53,13 +53,15 @@ export async function GET(request: NextRequest) {
         .select('tool_name, usage_count')
         .eq('user_id', user.userId)
         .gte('last_reset_date', new Date().toISOString().split('T')[0])
-      
+
       // Calculate total usage
-      const totalUsage = usage?.reduce((sum, item) => sum + item.usage_count, 0) || 0
-      
+      const totalUsage = usage?.reduce(
+        (sum: number, item: { usage_count: number }) => sum + item.usage_count,
+        0
+      ) || 0
+
       // Get plan limits
       const limits = getPlanLimits(planType)
-      
       return NextResponse.json({
         planType,
         status: subscription?.status || 'inactive',
